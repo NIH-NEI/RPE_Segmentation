@@ -44,7 +44,7 @@ in the same directory as where they are located.
 
 ## Using pre-trained models for predictions
 
-1. Download `model_weights_DNA_BW.zip`, `model_weights_Actin_RGB.zip` and `model_weights_Actin_BW.zip`, then
+1. Download [model_weights_DNA_BW.zip](https://github.com/NIH-NEI/RPE_Segmentation/releases/download/pretrained/model_weights_DNA_BW.zip), `model_weights_Actin_RGB.zip` and `model_weights_Actin_BW.zip`, then
 unzip them into `<dataprefix>` (this will create a sub-directory `<dataprefix>/model_weights` and place *.pth
 files there).
 
