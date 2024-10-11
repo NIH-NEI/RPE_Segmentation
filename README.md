@@ -7,13 +7,14 @@ instance segmentation of biomedical images.
 
 ## System Requirements
 
+- Operating Systems: Windows 10 or 11, Linux (Ubuntu, Centos 7)
 - 16 GB RAM or more
 - 1 GB disk space per image stack
 - CUDA-enabled GPU w. at least 12GB RAM (optional)
 
-Typical installation time: 10 min.
-
 ## Setting Up Development Environment
+
+Typical installation time: 10 min.
 
 1. Download and install [Miniconda](https://docs.conda.io/en/latest/miniconda.html)
 or [Anaconda](https://www.anaconda.com/products/individual).
