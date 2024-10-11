@@ -5,6 +5,13 @@ instance segmentation of biomedical images.
 
 *Andrei Volkov (NEI/NIH via MSC)*
 
+## System Requirements
+
+- 16 GB RAM or more
+- 1 GB disk space per image stack
+- CUDA-enabled GPU w. at least 12GB RAM (optional)
+Typical installation time: 10 min.
+
 ## Setting Up Development Environment
 
 1. Download and install [Miniconda](https://docs.conda.io/en/latest/miniconda.html)
@@ -82,3 +89,6 @@ the full training data set is very large. It is available upon request.
 The training script will look for the latest epoch of an existing model in `<dataprefix>/model_weights` and
 write new model weight files into the same directory with epoch number incremented after each epoch.
 
+## Contributors
+
+Andrei I. Volkov (volkovaiNIH)
