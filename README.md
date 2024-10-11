@@ -10,6 +10,7 @@ instance segmentation of biomedical images.
 - 16 GB RAM or more
 - 1 GB disk space per image stack
 - CUDA-enabled GPU w. at least 12GB RAM (optional)
+
 Typical installation time: 10 min.
 
 ## Setting Up Development Environment
