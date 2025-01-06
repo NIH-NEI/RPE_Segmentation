@@ -45,6 +45,9 @@ class MaskRCNNBaseConfig:
     def weights_name(self, epoch):
         return f'{self.model_name}-{self.class_name}-{self.image_type}-{epoch:04d}.pth'
     #
+    def logs_name(self, suff):
+        return f'{self.model_name}-{self.class_name}-{self.image_type}{suff}'
+    #
     def find_model_weights(self, weights_dir):
         epoch = 0
         wpath = None

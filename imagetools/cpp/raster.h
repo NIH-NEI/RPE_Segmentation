@@ -113,6 +113,7 @@ struct Raster16 {
 		}
 	}
 	~Raster16() { if (is_temp) delete[] buf; }
+	Boundary getBoundary() { return Boundary(0, 0, w-1, h-1); }
 	void fill(unsigned short c) {
 		for (long long i=0; i<len; i++) buf[i] = c;
 	}
@@ -362,6 +363,7 @@ public:
 	unsigned short *scanLine(int y, int z) {
 		return buf +(plane_len*z + (long long)(w)*y);
 	}
+	void paintCell(Particle3D& cell, unsigned short c);
 	unsigned short otsu();
 	double centerMass(Particle3D& cell, double *p_xc, double *p_yc, double *p_zc);
 };

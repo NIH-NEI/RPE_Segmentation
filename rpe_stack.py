@@ -76,6 +76,16 @@ class RpeJsonStack(object):
         self.pages = [RpeStackPage(fpath, self.shape, self.dtype) for fpath in filelist]
     #
 
+def et_find_elem(root, path):
+    if not path:
+        return root
+    nm = path[0]
+    for elem in root:
+        tag = elem.tag.split('}')[-1]
+        if tag == nm:
+            return et_find_elem(elem, path[1:])
+    return None
+
 #
 # OME TIFF support:
 #
@@ -304,125 +314,11 @@ def iter_rpe_stacks(root_dir, recurse=1):
                 yield fpath
 #
 
-if __name__ == '__main__':
-    
-    fdir = r'C:\RPE_Data\Z01'
-    
-    import skimage
-    import scipy
-    import torch
-    
-    ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
-    DEFAULT_DATA_DIR = ROOT_DIR
-    if not ROOT_DIR in sys.path:
-        sys.path.append(ROOT_DIR)  # To find local version of the library
-    
-    from mrcnn_torch.mrcnn_model import build_model, predict_one
-    from tiletools import slice_area
-    from savgol import SavitzkyGolay2D
-    from tm_config import TM_Config
-    
-    import imagetools
-    
-    def segment_stack(fpath, cfg, model, device):
-        fstk = RpeStack(fpath)
-        chname = cfg.class_name
-        print(f'Segmenting {chname} of {fstk.name}')
-        norm_map = {}
-        if cfg.image_type == 'RGB':
-            norm_map = fstk._rgb_norm_map()
-        else:
-            otsu = fstk.getChannelOtsu(chname)
-            sc_norm = 16383./otsu
-        otsu3 = 16383.
-        if cfg.postproc & imagetools.POSTPROC_DNA:
-            otsu3 = fstk.getChannelOtsu3(chname)[0]
-        #
-        tiles = slice_area((fstk.height, fstk.width), (cfg.tilesize, cfg.tilesize))
-        m_frames = np.zeros(shape=(fstk.n_frames, fstk.height, fstk.width), dtype=np.uint8)
-        #
-        particles_3d = []
-        for cframe in range(fstk.n_frames):
-            print(f'  frame {cframe+1} of {fstk.n_frames}')
-            particles_2d = []
-            #
-            if cfg.image_type == 'RGB':
-                fr_data = fstk.getRgbFrame(cframe)
-            else:
-                fr_data = fstk.getFrame(cframe, chname).astype(np.float32)
-                #
-                if cfg.postproc & imagetools.POSTPROC_DNA:
-                    fr_smooth = scipy.signal.convolve2d(fr_data, cfg.smooth_kern, boundary='symm', mode='same')
-                    m_frames[cframe][fr_smooth > otsu3] = 0xFF
-                    del fr_smooth
-                #
-                fr_data = fr_data * sc_norm
-                fr_data[fr_data > 65530.] = 65530.
-                fr_data = fr_data.astype(np.uint16)
-            #
-            ndimgs = []
-            origs = []
-            for x0, x1, y0, y1 in tiles:
-                if cfg.image_type == 'RGB':
-                    ndimg = fr_data[y0:y1+1, x0:x1+1, :]
-                else:
-                    ndimg = skimage.color.gray2rgb(fr_data[y0:y1+1, x0:x1+1])
-                masks, scores = predict_one(model, device, ndimg, prob_thresh=cfg.prob_thresh)
-                if len(masks.shape) != 3:
-                    nmasks = np.empty(shape=(1, cfg.tilesize, cfg.tilesize), dtype=np.uint8)
-                    nmasks[0] = masks
-                    masks = nmasks
-                masks[masks!=0] = 0xFF
-                particles = imagetools.masks_to_particles(masks, x0, y0)
-                particles_2d.extend(particles)
-            #
-            particles_3d.append(particles_2d)
-        #
-        tdir = fstk.subdir(cfg.subdir)
-        os.makedirs(tdir, exist_ok=True)
-        csvname = os.path.join(tdir, fstk.tname(chname, '.csv'))
-        tifname = os.path.join(tdir, fstk.tname(chname, '.tif'))
-        print('3D assembly...')
-        imagetools.assemble_ml(particles_3d, m_frames, csvname, cfg.postproc, cfg.good_iou, cfg.ok_iou)
-        print('Write:', tifname)
-        imwrite(tifname, m_frames, photometric='minisblack')
-    #
-
-    
-    cfg = TM_Config(ROOT_DIR, 'DNA', 'BW')
-    cfg.postproc = imagetools.POSTPROC_DNA
-
-    cfg.WEIGHTS_SUBDIR = os.path.join(ROOT_DIR, 'model_weights')
-    cfg.tilesize = 768
-    cfg.score_thresh = 0.65
-    cfg.prob_thresh = 0.7
-    
-    cfg.sg = SavitzkyGolay2D(5, 2)
-    cfg.smooth_kern = cfg.sg.kernel(0, 0)
-    
-    cfg.subdir = 'Predicted'
-    cfg.good_iou = 0.6
-    cfg.ok_iou = 0.5
-    
-    epoch, mwpath = cfg.find_model_weights(cfg.WEIGHTS_SUBDIR)
-    
-    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-    model = build_model(
-        num_classes=cfg.num_classes,
-        detections_per_img=cfg.detections_per_img,
-        score_thresh=cfg.score_thresh)
-    model.to(device)
-    
-    model.load_state_dict(torch.load(mwpath, map_location=device))
-    model.eval()
-    print(f'Created Mask_RCNN instance, device "{device}", weights from "{os.path.basename(mwpath)}"')
-
-    for fpath in iter_rpe_stacks(fdir):
-        segment_stack(fpath, cfg, model, device)
-    
-    print('')
-    print('All Done.')
-    sys.exit(0)
-    
-    
-    
+# if __name__ == '__main__':
+#
+#     fpath = r'C:\rpemrcnn\StackData\Sec61\P1-W2-SEC\P1-W2-SEC_G02_F004.ome.tif'
+#
+#     stk = RpeStack(fpath)
+#     print(stk.channels)
+#     print(stk.n_frames)
+#     print(stk.shape)

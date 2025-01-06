@@ -5,19 +5,13 @@ instance segmentation of biomedical images.
 
 *Andrei Volkov (NEI/NIH via MSC)*
 
-## System Requirements
-
-- Operating Systems: Windows 10 or 11, Linux (Ubuntu, Centos 7)
-- 16 GB RAM or more
-- 1 GB disk space per image stack
-- CUDA-enabled GPU w. at least 12GB RAM (optional)
-
 ## Setting Up Development Environment
 
-Typical installation time: 10 min.
-
 1. Download and install [Miniconda](https://docs.conda.io/en/latest/miniconda.html)
-or [Anaconda](https://www.anaconda.com/products/individual).
+or [Anaconda](https://www.anaconda.com/products/individual). On Windows systems you will
+also need to install C++ build tools, such as Microsoft Visual C++ or MinGW. When installing MSVC,
+make sure you have checked the box for x64/x86 build tools, such as
+`MSVC v143 - VS 2022 C++ x64/x86 build tools (latest)`.
 
 2. Check out **RPE_Segmentation** to a local directory `<prefix>/RPE_Segmentation`.
 (Replace `<prefix>` with any suitable local directory).
@@ -32,9 +26,9 @@ or [Anaconda](https://www.anaconda.com/products/individual).
 
 	`conda activate RPE_Segmentation`
 	
-6. Build the native extension (do this once on the first run or after making changes to the native extension):
+6. Install extra packages:
 
-	`pip install ./imagetools`
+	`pip install -r x-requirements.txt`
    
 To delete the Virtual environment at the Conda prompt, deactivate it first, if it is active:
 
@@ -91,6 +85,35 @@ the full training data set is very large. It is available upon request.
 The training script will look for the latest epoch of an existing model in `<dataprefix>/model_weights` and
 write new model weight files into the same directory with epoch number incremented after each epoch.
 
-## Contributors
+## Triaining models with your own data
 
-Andrei I. Volkov (volkovaiNIH)
+To train models with your own data, prepare the training data in a directory structured as follows:
+
+```
+C:\RPEMapDataRoot\RPE_Training
+└───Mask_RCNN
+    ├───Actin
+    │       P1-W1-TOM_E02_F001-000-000.png
+    │       P1-W1-TOM_E02_F001-000-001.png
+    │       P1-W1-TOM_E02_F001-000-002.png
+    │       ...
+    │       P1-W1-TOM_E02_F001_annotations_via.json
+    │
+    │       P1-W1-ZO1_D02_F001-000-000.png
+    │       P1-W1-ZO1_D02_F001-000-001.png
+    │       P1-W1-ZO1_D02_F001-000-002.png
+    │       ...
+    │       P1-W1-ZO1_D02_F001_annotations_via.json
+    │       ..............................
+    ├───DNA
+    │       P1-W1-TOM_E02_F001-000-000.png
+    │       P1-W1-TOM_E02_F001-000-001.png
+    │       P1-W1-TOM_E02_F001-000-002.png
+    │       ...
+    │       P1-W1-TOM_E02_F001_annotations_via.json
+    │       ..............................
+```
+
+The [prefix]-ZZZ-NNN.png files contain the source images, the [prefix]_annotations_via.json files
+(formatted in VIA-compatible way) contain annotations (ground truth).
+

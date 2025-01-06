@@ -185,6 +185,19 @@ struct Slice : public Particle
 	Slice() : Particle() {}
 };
 
+struct ParticlePerim {
+	Boundary bnd;
+	std::vector<Point> perim;
+	bool intersects(ParticlePerim& other) { return bnd.intersects(other.bnd); }
+	long long sqdist(ParticlePerim& other);
+	void assign(ParticlePerim& other) {
+		bnd = other.bnd;
+		perim.resize(other.perim.size());
+		for (size_t j=0; j<other.perim.size(); j++)
+			perim[j] = other.perim[j];
+	}
+};
+
 //--- 3D stuff
 
 struct Point3D
@@ -414,6 +427,14 @@ double fill_centroid(std::vector<HSeg> & fill, double *px, double *py);
 double fill_circularity(std::vector<HSeg> & fill);
 long long fill_overlay_area(std::vector<HSeg> &fill, std::vector<HSeg> &other_fill);
 void fill_from_contour(std::vector<HSeg> &fill, Contour &cont);
+
+inline double fill_iou(std::vector<HSeg> & fill1, std::vector<HSeg> & fill2) {
+	long long a1 = fill_area(fill1);
+	long long a2 = fill_area(fill2);
+	if (a1 == 0 || a2 == 0) return  0.;
+	long long ovl = fill_overlay_area(fill1, fill2);
+	return double(ovl) / double(a1 + a2 - ovl);
+}
 
 void write_particle_data(std::vector<Slice> particles, const char *outfn);
 void write_cell_data(std::vector<Particle3D> &cells, const char *outfn);

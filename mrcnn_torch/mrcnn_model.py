@@ -4,6 +4,8 @@ import numpy as np
 import torch
 import torch.utils.data
 
+from contextlib import redirect_stdout
+
 # https://github.com/pytorch/vision/blob/main/torchvision/models/detection/backbone_utils.py
 # https://github.com/pytorch/vision/blob/main/torchvision/models/detection/mask_rcnn.py
 
@@ -60,14 +62,20 @@ def predict_batch(model, device, ndimgs, prob_thresh=0.5):
     return res
 #
 
-def train(model, device, cfg, ndds, weights_dir, augm=None, num_epochs=10):
+def train(model, device, cfg, ndds, weights_dir, augm=None, num_epochs=10, logdir=None):
     os.makedirs(weights_dir, exist_ok=True)
+    if logdir:
+        os.makedirs(logdir, exist_ok=True)
+        logpath = os.path.join(logdir, cfg.logs_name('-loss.csv'))
+        ioupath = os.path.join(logdir, cfg.logs_name('-iou.csv'))
+    else:
+        logpath = ioupath = None
     #
     epoch, wpath = cfg.find_model_weights(weights_dir)
     if not wpath is None:
         start_epoch = epoch + 1
         print('Loading model weights from:', wpath)
-        model.load_state_dict(torch.load(wpath))
+        model.load_state_dict(torch.load(wpath, weights_only=True))
     else:
         start_epoch = 1
     end_epoch = start_epoch + num_epochs - 1
@@ -97,15 +105,47 @@ def train(model, device, cfg, ndds, weights_dir, augm=None, num_epochs=10):
             ndds.shuffle()
 
         # train for one epoch, printing every 10 iterations
-        engine.train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq=10)
+        metric_logger = engine.train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq=10)
         # update the learning rate
         lr_scheduler.step()
         # evaluate on the test dataset
-        engine.evaluate(model, data_loader_test, device=device)
+        eval = engine.evaluate(model, data_loader_test, device=device)
         
         wfn = cfg.weights_name(epoch)
         wpath = os.path.join(weights_dir, wfn)
         print('Save model weights to:', wpath)
         torch.save(model.state_dict(), wpath)
+        
+        if not logpath is None:
+            print('Save Epoch average loss values to:', logpath)
+            mkeys = sorted(metric_logger.meters.keys())
+            if os.path.exists(logpath):
+                flog = open(logpath, 'at', encoding='utf-8')
+            else:
+                flog = open(logpath, 'wt', encoding='utf-8')
+                hdrs = ['Epoch',] + mkeys
+                flog.write(','.join(hdrs)+'\n')
+            values = [str(epoch),] + ['%.6f' % (metric_logger.meters[mk].global_avg,) for mk in mkeys]
+            flog.write(','.join(values)+'\n')
+            flog.close()
+            
+        if not ioupath is None:
+            print('Save Evaluation IoU values to:', ioupath)
+            mkeys = [itp for itp in ('bbox', 'segm') if itp in eval.coco_eval]
+            if os.path.exists(ioupath):
+                flog = open(ioupath, 'at', encoding='utf-8')
+            else:
+                flog = open(ioupath, 'wt', encoding='utf-8')
+                hdrs = ['Epoch',]
+                for itp in mkeys:
+                    hdrs.extend([itp+'_AP_95', itp+'_AP_50', itp+'_AP_75', itp+'_AR_50',])
+                flog.write(','.join(hdrs)+'\n')
+            values = [str(epoch),]
+            for itp in mkeys:
+                stats = eval.coco_eval[itp].stats
+                for i in (0, 1, 2, 8):
+                    values.append('%.4f' % (stats[i],))
+            flog.write(','.join(values)+'\n')
+            flog.close()
     #
 

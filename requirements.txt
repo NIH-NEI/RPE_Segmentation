@@ -1,0 +1,10 @@
+numpy==1.26.4
+swig==4.3.0
+imea==0.3.5
+scikit-learn==1.6.0
+seaborn==0.13.2
+aicsimageio==4.5.2
+aicssegmentation==0.4.2
+scikit-image==0.25.0
+imageio==2.36.1
+imagecodecs==2024.9.22

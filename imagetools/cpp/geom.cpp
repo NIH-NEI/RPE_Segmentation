@@ -262,6 +262,20 @@ long long Particle::overlay_area(Particle &other)
 	return fill_overlay_area(fill, other.fill);
 }
 
+long long ParticlePerim::sqdist(ParticlePerim& other)
+{
+	long long res = -1ll;
+	for (Point& pt : perim) {
+		for (Point& opt : other.perim) {
+			int dx = pt.x - opt.x;
+			int dy = pt.y - opt.y;
+			long long qsd = (long long)dx * dx + (long long)dy * dy;
+			if (res < 0 || qsd < res) res = qsd;
+		}
+	}
+	return res;
+}
+
 //----------------------------- Particle3D --------------------------------
 
 long long Particle3D::update_from_fill()

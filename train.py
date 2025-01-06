@@ -63,7 +63,7 @@ if __name__ == '__main__':
         description='Train Pytorch-based Mask_RCNN model to segment RPE Map image stacks.')
     parser.add_argument('channel', nargs=1,
             metavar='CHANNEL',
-            help='Microscope Channel Label (DNA, Actin, etc.)')
+            help='Microscope Channel Label (DNA, Actin, Actin-BW, etc.)')
     parser.add_argument('-d', '--data-dir', required=False,
             metavar="/data/directory",
             default=DEFAULT_DATA_DIR,
@@ -79,6 +79,11 @@ if __name__ == '__main__':
             default=RPE_Config.WEIGHTS_SUBDIR,
             help='Path to weights .pth file or directory containing .pth.\n'+\
                 'Can be relative to {data-dir}. Default: "%s/".' % (RPE_Config.WEIGHTS_SUBDIR,))
+    parser.add_argument('-l', '--logdir', required=False,
+            metavar="/path/to/logs",
+            default='logs',
+            help='Path to directory where to write logs.\n'+\
+                'Can be relative to {data-dir}. Default: "logs/".')
     parser.add_argument('-e', '--epochs', required=False, type=int,
             metavar="NO_OF_EPOCHS",
             default=DEFAULT_NO_OF_EPOCHS,
@@ -98,6 +103,7 @@ if __name__ == '__main__':
     args.data_dir = os.path.abspath(os.path.join(DEFAULT_DATA_DIR, args.data_dir))
     args.training_data = os.path.abspath(os.path.join(args.data_dir, args.training_data))
     args.weights = os.path.abspath(os.path.join(args.data_dir, args.weights))
+    args.logdir = os.path.abspath(os.path.join(args.data_dir, args.logdir))
     
     if args.disable_gpu:
         print ('Disabling GPUs (if any).')
@@ -106,7 +112,7 @@ if __name__ == '__main__':
     print(args)
 
     channel = args.channel[0]
-    img_type = 'BW'
+    img_type = 'RGB' if channel=='Actin' else 'BW'
     parts = channel.split('-')
     if len(parts) > 1:
         channel = parts[0]
@@ -121,7 +127,7 @@ if __name__ == '__main__':
     cfg.learning_rate = args.rate
     cfg.momentum = args.momentum
     cfg.gamma = 0.316227766
-    cfg.step_size = 10
+    cfg.step_size = 25
     cfg.min_ann_per_img = 1
     cfg.trainable_layers = 5
 
@@ -147,7 +153,7 @@ if __name__ == '__main__':
     
     model.to(device)
     model.train()
-    train(model, device, cfg, ndds, args.weights, augm=augm.augment, num_epochs=args.epochs)
+    train(model, device, cfg, ndds, args.weights, augm=augm.augment, num_epochs=args.epochs, logdir=args.logdir)
 
     print('Done training.')
     sys.exit(0)

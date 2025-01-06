@@ -71,6 +71,7 @@ class RPE_Predictor(object):
         self.sg = SavitzkyGolay2D(5, 2)
         #
         self.cfg = cfg = RPE_Config(self.args.data_dir, 'Any', 'RGB')
+        cfg.CSV_PREDICTIONS_SUBDIR = args.prediction_dir if cfg.PREDICTIONS_SUBDIR == args.csv_dir else args.csv_dir
         cfg.PREDICTIONS_SUBDIR = args.prediction_dir
         cfg.score_thresh = 0.65
         cfg.prob_thresh = 0.7
@@ -94,6 +95,7 @@ class RPE_Predictor(object):
                     print(f'Warning: No channel {chname} in {fpath}.')
                     continue
                 tgtdir = os.path.abspath(os.path.join(fstk.base_dir, self.cfg.PREDICTIONS_SUBDIR))
+                csvdir = os.path.abspath(os.path.join(fstk.base_dir, self.cfg.CSV_PREDICTIONS_SUBDIR))
                 #
                 self.cfg.class_name = chname
                 self.cfg.image_type = self.cfg.defaultImageType(self.cfg.class_name)
@@ -116,15 +118,22 @@ class RPE_Predictor(object):
                     print(f'Cannot access output directory {tgtdir}')
                     break
                 #
+                os.makedirs(csvdir, exist_ok=True)
+                if not os.path.isdir(csvdir):
+                    print(f'Cannot access output directory {csvdir}')
+                    break
+                #
                 if self.args.adjust == 'Auto':
                     self.cfg.postproc = self.AUTO_ADJUST.get(self.cfg.class_name, imagetools.POSTPROC_NONE)
                 else:
                     self.cfg.postproc = self.AUTO_ADJUST.get(self.args.adjust, imagetools.POSTPROC_NONE)
                 print(f'Segmenting {chname} of {fpath}...')
                 #
-                self.predict_one(fstk, wpath, tgtdir)
+                self.predict_one(fstk, wpath, tgtdir, csvdir)
     #
-    def predict_one(self, fstk, wpath, tgtdir):
+    def predict_one(self, fstk, wpath, tgtdir, csvdir=None):
+        if csvdir is None:
+            csvdir = tgtdir
         chname = self.cfg.class_name
         model_key = (chname, self.cfg.image_type)
         if model_key in self.model_cache:
@@ -135,7 +144,7 @@ class RPE_Predictor(object):
                 detections_per_img=self.cfg.detections_per_img,
                 score_thresh=self.cfg.score_thresh)
             print('Loading model weights from:', wpath)
-            model.load_state_dict(torch.load(wpath))
+            model.load_state_dict(torch.load(wpath, weights_only=True))
             model.to(self.device)
             model.eval()
             self.model_cache[model_key] = model
@@ -184,12 +193,12 @@ class RPE_Predictor(object):
             particles_3d.append(particles_2d)
         #
         tbn = f'{fstk.base_name}_{chname}_RPE'
-        csvname = os.path.join(tgtdir, tbn+'.csv')
-        tifname = os.path.join(tgtdir, tbn+'.csv')
+        csvname = os.path.join(csvdir, tbn+'.csv')
+        tifname = os.path.join(tgtdir, tbn+'.tif')
         print('3D assembly...')
         imagetools.assemble_ml(particles_3d, m_frames, csvname, self.cfg.postproc, self.cfg.good_iou, self.cfg.ok_iou)
         print('Write:', tifname)
-        tifffile.imwrite(tifname, m_frames, photometric='minisblack')
+        tifffile.imwrite(tifname, m_frames, photometric='minisblack', compression='zlib')
     #
     def prepare_rgb_frame(self, fstk, cframe, chname):
         fr_data = np.empty(shape=(fstk.height, fstk.width, 3), dtype=np.uint8)
@@ -249,16 +258,7 @@ def parse_resp_file(resp_path):
     DEFAULT_DATA_DIR = os.path.dirname(fpath)
     return arglist
 
-if __name__ == '__main__':
-
-    if len(sys.argv) > 1 and sys.argv[1].startswith('@'):
-        try:
-            arglist = parse_resp_file(sys.argv[1][1:])
-        except Exception as ex:
-            print ('Error parsing response file:', str(ex))
-            sys.exit(1)
-    else:
-        arglist = sys.argv[1:]
+def main(arglist):
     
     import argparse
 
@@ -275,6 +275,12 @@ if __name__ == '__main__':
             metavar="prediction/directory",
             default=RPE_Config.PREDICTIONS_SUBDIR,
             help='Output directory, relative to the directory or input files.\nDefault: "%s"' % \
+                RPE_Config.PREDICTIONS_SUBDIR)
+    parser.add_argument('-c', '--csv-dir', required=False,
+            metavar="csv/prediction/directory",
+            default=RPE_Config.PREDICTIONS_SUBDIR,
+            help='Optional directory for CSV predictions, if different from "prediction/directory".\n' +\
+            'Can be relative to the directory or input files.\nDefault: "%s"' % \
                 RPE_Config.PREDICTIONS_SUBDIR)
     parser.add_argument('-d', '--data-dir', required=False,
             metavar="/data/directory",
@@ -317,6 +323,24 @@ if __name__ == '__main__':
     
     pre = RPE_Predictor(args)
     pre.predict_all()
+    return 0
 
-    print('Done, exiting(0).')
-    sys.exit(0)
+if __name__ == '__main__':
+
+    if len(sys.argv) > 1 and sys.argv[1].startswith('@'):
+        try:
+            arglist = parse_resp_file(sys.argv[1][1:])
+        except Exception as ex:
+            print ('Error parsing response file:', str(ex))
+            sys.exit(1)
+    else:
+        arglist = sys.argv[1:]
+        
+    try:
+        rc = main(arglist)
+        print(f'Done, exiting({rc}).')
+    except Exception as ex:
+        print('Exception:', str(ex))
+        rc = -1
+
+    sys.exit(rc)
