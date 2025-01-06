@@ -75,7 +75,7 @@ def train(model, device, cfg, ndds, weights_dir, augm=None, num_epochs=10, logdi
     if not wpath is None:
         start_epoch = epoch + 1
         print('Loading model weights from:', wpath)
-        model.load_state_dict(torch.load(wpath, weights_only=True))
+        model.load_state_dict(torch.load(wpath, map_location=device, weights_only=True))
     else:
         start_epoch = 1
     end_epoch = start_epoch + num_epochs - 1

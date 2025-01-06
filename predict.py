@@ -144,7 +144,7 @@ class RPE_Predictor(object):
                 detections_per_img=self.cfg.detections_per_img,
                 score_thresh=self.cfg.score_thresh)
             print('Loading model weights from:', wpath)
-            model.load_state_dict(torch.load(wpath, weights_only=True))
+            model.load_state_dict(torch.load(wpath, map_location=self.device, weights_only=True))
             model.to(self.device)
             model.eval()
             self.model_cache[model_key] = model

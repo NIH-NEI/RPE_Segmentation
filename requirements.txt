@@ -8,3 +8,5 @@ aicssegmentation==0.4.2
 scikit-image==0.25.0
 imageio==2.36.1
 imagecodecs==2024.9.22
+opencv-python-headless==4.10.0.84
+opencv-contrib-python-headless
