@@ -63,7 +63,7 @@ and place some input data there).
 
 (replace `<dataprefix>` with the actual directory).
 
-Results can be found in `<dataprefix>/Test_Data/W1/Predicted` and `<dataprefix>/Test_Data/W2/Predicted`.
+Results can be found in `<dataprefix>/Test_Data/Predicted`.
 
 ## Training models.
 
@@ -71,8 +71,8 @@ Results can be found in `<dataprefix>/Test_Data/W1/Predicted` and `<dataprefix>/
 and [RPE_Training_Actin_RGB.zip](https://github.com/NIH-NEI/RPE_Segmentation/releases/download/training/RPE_Training_Actin_RGB.zip),
 then unzip them into `<dataprefix>`.
 The actual training data will be found in `<dataprefix>/RPE_Training/Mask_RCNN/DNA` and
-<dataprefix>/RPE_Training/Mask_RCNN/Actin`. Note that this training data is for demo purposes only, since
-the full training data set is very large. It is available upon request.
+<dataprefix>/RPE_Training/Mask_RCNN/Actin`. *Note that this training data is for demo purposes only, since
+the full training data set is very large. It is available upon request.*
 
 2. At conda prompt, activate *RPE_Segmentation* and cd to `<prefix>/RPE_Segmentation`, then type:
 
@@ -116,4 +116,78 @@ C:\RPEMapDataRoot\RPE_Training
 
 The [prefix]-ZZZ-NNN.png files contain the source images, the [prefix]_annotations_via.json files
 (formatted in VIA-compatible way) contain annotations (ground truth).
+
+## Evaluating segmentation quality
+
+The test data [Test_Data.zip](https://github.com/NIH-NEI/RPE_Segmentation/releases/download/testdata/Test_Data.zip)
+comes with human-created annotations, which can be used to evaluate the segmentation quality.
+Follow steps in [Training models](#training-models) section, but instead of executing `predict.py`
+type the following command:
+
+`python evaluate.py <dataprefix>/Test_Data [-f]`
+
+Use `-f` option to re-do previous segmentation, e.g. after updating Mask_RCNN model weights. For list of all available
+command-line options, type:
+
+`python evaluate.py -h`
+
+Evaluation results are stored in `<dataprefix>/Test_Data/EvaluationResults`. Comparison is done separately for Actin
+and DNA channels in each stack. The result is a plain text file formatted like this:
+
+```
++-------------------------------+---------+----------+
+| 2D Comparison - Actin of P1-W2-ZO1_D02_F006        |
++-------------------------------+---------+----------+
+| Primary annotations           |    8206 |  100.00% |
+| Secondary annotations         |    7565 |   92.19% |
+| Fragmented                    |       0 |    0.00% |
+| Fused                         |      21 |    0.26% |
+| False Positives               |     174 |    2.12% |
+| False Negatives               |     792 |    9.65% |
++-------------------------------+---------+----------+
+| Matches at IoU >= 95%         |    1462 |   17.82% |
+| Matches at IoU >= 90%         |    5662 |   69.00% |
+| Matches at IoU >= 80%         |    7031 |   85.68% |
+| Matches at IoU >= 75%         |    7139 |   87.00% |
+| Matches at IoU >= 50%         |    7309 |   89.07% |
++-------------------------------+---------+----------+
+
++-------------------------------+---------+----------+
+| 3D Comparison - Actin of P1-W2-ZO1_D02_F006        |
++-------------------------------+---------+----------+
+| Primary annotations           |     607 |  100.00% |
+| Secondary annotations         |     575 |   94.73% |
+| Fragmented                    |       0 |    0.00% |
+| Fused                         |      18 |    2.97% |
+| False Positives               |       2 |    0.33% |
+| False Negatives               |      27 |    4.45% |
++-------------------------------+---------+----------+
+| Matches at IoU >= 95%         |       8 |    1.32% |
+| Matches at IoU >= 90%         |     141 |   23.23% |
+| Matches at IoU >= 80%         |     365 |   60.13% |
+| Matches at IoU >= 75%         |     417 |   68.70% |
+| Matches at IoU >= 50%         |     512 |   84.35% |
++-------------------------------+---------+----------+
+```
+
+Comparison is done in both 2D, whivch is good for evaluating quality of raw Mask_RCNN segmentations, and 3D - for evaluating
+overall quality of the whole process, including 3D assembly. The metrics presented are:
+
+- *Primary annotations*: total number of annotations in the primary (manual) set
+
+- *Secondary annotations*: total number of annotations in the secondary (automatic) set
+
+- *Fragmented*: number of mismatches due to fragmentation, i.e. an annotation from the manual set overlaps with 2 or more
+annotations from the automatic set
+
+- *Fused*: number of mismatches due to "fusions", i.e. 2 or more annotations from the manual set overlaps with one annotation
+from the automatic set
+
+- *False Positives*: number of false positives, annotations from the automatic set not matching anything in the manual set
+
+- *False Negatives*: number of false negatives, annotations from the manual set not matching any automatic annotations
+
+- *Matches at IoU >= N%*: Number of 1-to-1 matches having Intersection over Union value greater or equal to the specified value
+
+The percentages are given relative to the *Primary annotations*.
 
