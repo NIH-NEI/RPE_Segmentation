@@ -83,7 +83,9 @@ the full training data set is very large. It is available upon request.*
 (replace `<dataprefix>` with the actual directory).
 
 The training script will look for the latest epoch of an existing model in `<dataprefix>/model_weights` and
-write new model weight files into the same directory with epoch number incremented after each epoch.
+write new model weight files into the same directory with epoch number incremented after each epoch. In addition, loss metrics
+(averaged across each epoch) are stored in `<dataprefix>/logs/*-loss.csv` files, and validation metrics (calculated after
+each epoch), in `<dataprefix>/logs/*-iou.csv` files.
 
 ## Triaining models with your own data
 
